@@ -17,7 +17,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Supabase BaaS Client (PostgreSQL / Auth / Realtime) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
+  <script src="supabase.js?v=3"></script>
 
   <script>
     tailwind.config = {
@@ -1149,16 +1149,20 @@
       }
     }
 
-    function handleGoogleLogin() {
-      const email = prompt("กรุณาระบุบัญชี Google Email สำหรับเข้าสู่ระบบ:", "user@gmail.com");
-      if (!email || !email.includes('@')) return;
-      const name = email.split('@')[0];
-      const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
-      state.currentUser = { name, email, role };
-      localStorage.setItem('ebook_user', JSON.stringify(state.currentUser));
-      state.activePage = role === 'admin' ? 'admin' : 'store';
-      renderAllViews();
-      lucide.createIcons();
+    async function handleGoogleLogin() {
+      if (window.supabaseService && window.supabaseService.isConfigured() && window.supabaseService.client) {
+        try {
+          const { error } = await window.supabaseService.client.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: window.location.origin }
+          });
+          if (error) throw error;
+          return;
+        } catch (e) {
+          console.warn("Google OAuth note:", e);
+        }
+      }
+      alert("กรุณาใช้การ เข้าสู่ระบบ (Login) หรือ สมัครสมาชิก (Register) ด้วยอีเมลและรหัสผ่านเพื่อเชื่อมต่อกับฐานข้อมูล Supabase ครับ");
     }
 
     async function handleLogout() {

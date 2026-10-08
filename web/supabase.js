@@ -284,6 +284,14 @@ class SupabaseService {
         });
         if (error) throw error;
 
+        // Check if user already exists (Supabase returns empty identities array)
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          return { 
+            success: false, 
+            error: "อีเมลนี้เคยลงทะเบียนไว้ในระบบ Supabase แล้ว กรุณาไปที่แท็บ 'เข้าสู่ระบบ (Login)' ครับ" 
+          };
+        }
+
         // 2. Direct upsert to public.profiles table
         const userId = data.user?.id;
         if (userId) {
