@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-Book Shop - Desktop Client (Electron)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex text-slate-800 antialiased select-none">
+
+  <!-- Desktop Sidebar -->
+  <aside class="w-64 bg-white border-r border-slate-200 p-5 flex flex-col justify-between">
+    <div class="space-y-6">
+      <div class="flex items-center space-x-3 px-2">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
+          <i data-lucide="book-open" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-slate-900 text-base leading-tight">E-Book Shop</h1>
+          <span class="text-[10px] text-blue-600 font-semibold">Desktop Edition</span>
+        </div>
+      </div>
+
+      <nav class="space-y-1 text-sm font-medium">
+        <button onclick="setTab('store')" id="nav-store" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition bg-blue-600 text-white shadow-sm">
+          <i data-lucide="home" class="w-4 h-4"></i>
+          <span>หน้าร้าน</span>
+        </button>
+        <button onclick="setTab('seller')" id="nav-seller" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-100">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          <span>ส่งขายหนังสือ (Creator)</span>
+        </button>
+        <button onclick="setTab('cart')" id="nav-cart" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-100">
+          <div class="flex items-center space-x-3">
+            <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+            <span>ตะกร้าสินค้า</span>
+          </div>
+          <span id="desk-cart-count" class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">0</span>
+        </button>
+        <button onclick="setTab('track')" id="nav-track" class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-100">
+          <i data-lucide="clock" class="w-4 h-4"></i>
+          <span>ตรวจสอบสถานะ</span>
+        </button>
+        <div class="pt-3 border-t border-slate-100 mt-2">
+          <button onclick="tryDesktopAdmin()" id="nav-admin" class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-slate-600 hover:bg-amber-50 hover:text-amber-900">
+            <div class="flex items-center space-x-3">
+              <i data-lucide="shield-check" class="w-4 h-4 text-amber-600"></i>
+              <span>Admin Dashboard</span>
+            </div>
+            <span class="text-[9px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded">Admin Only</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+
+    <!-- User Auth Status -->
+    <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="font-bold text-slate-900" id="desk-user-name">ผู้ดูแลระบบ (Admin)</span>
+        <span class="text-[9px] font-bold px-1.5 py-0.5 bg-amber-400 text-slate-950 rounded" id="desk-user-role">ADMIN</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5">
+        <button onclick="setDeskRole('admin')" class="py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-[10px] transition">Admin (หลังบ้าน)</button>
+        <button onclick="setDeskRole('user')" class="py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-[10px] transition">User (ซื้อ/ขาย)</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Desktop Main Content -->
+  <main class="flex-1 p-8 overflow-y-auto">
+    <div id="desktop-content"></div>
+  </main>
+
+  <script>
+    let activeTab = 'store';
+    let currentUser = { name: "ผู้ดูแลระบบ (Admin)", email: "admin@ebookshop.com", role: "admin" };
+    let products = [
+      { id: "1", title: "ชีวิตดีขึ้นได้ เริ่มจากตัวเรา", author: "นภัสสร", price: 199, rating: 4.8, fileType: "PDF (5 MB)", category: "หนังสือพัฒนาตนเอง" },
+      { id: "2", title: "เทคนิคการทำงานให้มีประสิทธิภาพ", author: "ดร. กิตติศักดิ์", price: 159, rating: 4.9, fileType: "PDF (4.8 MB)", category: "Productivity" },
+      { id: "3", title: "สุขภาพดีเริ่มต้นที่ใจ", author: "พญ. นิลุบล", price: 129, rating: 4.7, fileType: "PDF (6.1 MB)", category: "สุขภาพ & จิตวิทยา" },
+      { id: "4", title: "ศิลปะแห่งการใช้ชีวิต", author: "ก้องภพ", price: 149, rating: 4.8, fileType: "PDF (3.9 MB)", category: "ปรัชญา & ความสุข" }
+    ];
+
+    function setDeskRole(role) {
+      currentUser.role = role;
+      currentUser.name = role === 'admin' ? 'ผู้ดูแลระบบ (Admin)' : 'สมชาย (User - ซื้อ & ลงขายได้)';
+      document.getElementById('desk-user-name').innerText = currentUser.name;
+      document.getElementById('desk-user-role').innerText = role.toUpperCase();
+      document.getElementById('desk-user-role').className = role === 'admin' ? 'text-[9px] font-bold px-1.5 py-0.5 bg-amber-400 text-slate-950 rounded' : 'text-[9px] font-bold px-1.5 py-0.5 bg-blue-600 text-white rounded';
+      alert(`สลับบทบาทเป็น [${role.toUpperCase()}]`);
+      if (activeTab === 'admin' && role !== 'admin') setTab('store');
+      else renderDesktopContent();
+    }
+
+    function tryDesktopAdmin() {
+      if (currentUser.role !== 'admin') {
+        alert("สงวนสิทธิ์เฉพาะ Admin เท่านั้น! กรุณากดสลับเป็น Admin ที่แถบด้านซ้ายล่าง");
+        return;
+      }
+      setTab('admin');
+    }
+
+    function setTab(tab) {
+      activeTab = tab;
+      ['store', 'seller', 'cart', 'track', 'admin'].forEach(t => {
+        const el = document.getElementById(`nav-${t}`);
+        if (el) {
+          if (t === tab) {
+            el.className = "w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl transition bg-blue-600 text-white shadow-sm";
+          } else {
+            el.className = "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition text-slate-600 hover:bg-slate-100";
+          }
+        }
+      });
+      renderDesktopContent();
+      lucide.createIcons();
+    }
+
+    function renderDesktopContent() {
+      const container = document.getElementById('desktop-content');
+      if (activeTab === 'store') {
+        container.innerHTML = `
+          <div class="space-y-6">
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-lg">
+              <span class="px-2.5 py-0.5 bg-white/20 rounded-full text-xs font-semibold">💳 Stripe Secured</span>
+              <h2 class="text-3xl font-extrabold mt-2">อ่านได้ทุกที่ ทุกเวลา กับ E-Book ของเรา</h2>
+              <p class="text-blue-100 text-sm mt-2">หนังสือดี มีคุณภาพ ในราคาที่คุณเข้าถึงได้</p>
+            </div>
+
+            <div>
+              <h3 class="text-xl font-bold text-slate-900 mb-4">หนังสือแนะนำ</h3>
+              <div class="grid grid-cols-2 gap-4">
+                ${products.map(p => `
+                  <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div>
+                      <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">${p.category}</span>
+                      <h4 class="font-bold text-slate-900 text-sm mt-1">${p.title}</h4>
+                      <div class="text-xs text-slate-500 mt-0.5">${p.author} • ${p.fileType} • ★ ${p.rating}</div>
+                      <div class="text-base font-extrabold text-blue-600 mt-2">฿ ${p.price}</div>
+                    </div>
+                    <button onclick="alert('หยิบใส่ตะกร้าเรียบร้อย')" class="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md">หยิบใส่ตะกร้า</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (activeTab === 'seller') {
+        container.innerHTML = `
+          <div class="max-w-2xl mx-auto bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-xl text-slate-900">ส่งผลงาน / ลงขาย Digital Product</h3>
+            <p class="text-xs text-slate-500">กรอกข้อมูลและอัปโหลดไฟล์เพื่อวางจำหน่าย รับเงินตรงผ่าน Stripe</p>
+            <input type="text" placeholder="ชื่อหนังสือ / สินค้า" class="w-full px-3.5 py-2 text-xs border rounded-xl" />
+            <input type="number" placeholder="ราคาขายจริง (฿)" class="w-full px-3.5 py-2 text-xs border rounded-xl" />
+            <textarea placeholder="คำอธิบายโดยย่อ" rows="3" class="w-full px-3.5 py-2 text-xs border rounded-xl"></textarea>
+            <button onclick="alert('ส่งผลงานสำเร็จ!'); setTab('store');" class="w-full py-3 bg-indigo-600 text-white font-bold text-xs rounded-xl">วางขายทันที</button>
+          </div>
+        `;
+      } else if (activeTab === 'admin') {
+        container.innerHTML = `
+          <div class="space-y-6">
+            <div class="flex justify-between items-center">
+              <h3 class="text-2xl font-bold text-slate-900">Admin Dashboard & Analytics</h3>
+              <span class="px-2.5 py-1 bg-amber-400 text-slate-950 font-bold rounded-lg text-xs">Admin Verified</span>
+            </div>
+            <div class="grid grid-cols-4 gap-4">
+              <div class="bg-white p-4 rounded-2xl border"><span class="text-xs text-slate-400">Total Sales (Stripe)</span><div class="text-xl font-bold text-slate-900 mt-1">฿ 14,850</div></div>
+              <div class="bg-white p-4 rounded-2xl border"><span class="text-xs text-slate-400">Total Orders</span><div class="text-xl font-bold text-slate-900 mt-1">42</div></div>
+              <div class="bg-white p-4 rounded-2xl border"><span class="text-xs text-slate-400">Customers</span><div class="text-xl font-bold text-slate-900 mt-1">38</div></div>
+              <div class="bg-white p-4 rounded-2xl border"><span class="text-xs text-slate-400">Products</span><div class="text-xl font-bold text-slate-900 mt-1">${products.length}</div></div>
+            </div>
+          </div>
+        `;
+      } else if (activeTab === 'track') {
+        container.innerHTML = `
+          <div class="max-w-xl mx-auto bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-lg text-slate-900">ตรวจสอบสถานะคำสั่งซื้อ & ดาวน์โหลดไฟล์</h3>
+            <input type="text" placeholder="รหัสคำสั่งซื้อ เช่น ORD202509010001" class="w-full px-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl" />
+            <button class="w-full py-2.5 bg-blue-600 text-white font-bold text-xs rounded-xl">ค้นหา</button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `<div class="bg-white p-6 rounded-2xl">กำลังโหลดหน้า ${activeTab}...</div>`;
+      }
+    }
+
+    setTab('store');
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "ebook-shop-desktop",
+  "version": "1.0.0",
+  "description": "E-Book & Digital Product Store Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win"
+  },
+  "keywords": ["ebook", "digital-product", "electron", "desktop-app"],
+  "author": "E-Book Shop Dev Team",
+  "license": "MIT",
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}
