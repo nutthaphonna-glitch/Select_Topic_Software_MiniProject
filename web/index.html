@@ -2,9 +2,16 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>E-Book Shop | ซื้อ-ขาย Digital Product ครบวงจร</title>
   <meta name="description" content="E-Book Shop ร้านขาย Digital Product - อ่านได้ทุกที่ ทุกเวลา กับ E-Book ของเรา พร้อมระบบชำระเงิน Stripe และ Admin Dashboard" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="E-Book Shop" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -538,6 +545,119 @@
             <span>ระบบทำงานอัตโนมัติ:</span>
           </div>
           <p class="text-slate-500">เมื่อลูกค้ากดชำระเงินสำเร็จผ่าน Stripe ระบบจะจัดส่งใบเสร็จรับเงินพร้อมลิงก์ดาวน์โหลด E-Book ไปยังอีเมลของลูกค้าทันทีผ่าน Resend</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= EXPORT CENTER MODAL ================= -->
+  <div id="export-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 p-6 text-white relative">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <i data-lucide="download" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">ศูนย์ส่งออกข้อมูล (Data Export Center)</h3>
+              <p class="text-xs text-blue-100">ส่งออกข้อมูลสินค้า, ผู้ใช้งาน และยอดขายเป็นไฟล์ CSV (Excel) หรือ JSON</p>
+            </div>
+          </div>
+          <button onclick="closeExportModal()" class="p-2 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <!-- 1. Export Products Card -->
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:border-blue-300 transition">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm">📦 รายการสินค้า (Products)</h4>
+                <p class="text-[11px] text-slate-500">แคตตาล็อกหนังสือ, ราคาเดียว, ผู้แต่ง, หมวดหมู่ และยอดขาย</p>
+              </div>
+            </div>
+            <span id="export-products-count" class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">0 รายการ</span>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-200/60 flex items-center gap-2">
+            <button onclick="exportData('products', 'csv')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+              <span>Export CSV (Excel)</span>
+            </button>
+            <button onclick="exportData('products', 'json')" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+              <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+              <span>Export JSON</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Export Users Card -->
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:border-indigo-300 transition">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                <i data-lucide="users" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm">👥 รายชื่อผู้ใช้งาน (Users & Customers)</h4>
+                <p class="text-[11px] text-slate-500">ข้อมูลสมาชิกทั้งหมดจาก Supabase Profiles และลูกค้าที่สั่งซื้อ</p>
+              </div>
+            </div>
+            <span id="export-users-count" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">0 บัญชี</span>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-200/60 flex items-center gap-2">
+            <button onclick="exportData('users', 'csv')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+              <span>Export CSV (Excel)</span>
+            </button>
+            <button onclick="exportData('users', 'json')" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+              <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+              <span>Export JSON</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Export Sales Report Card -->
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl hover:border-emerald-300 transition">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-slate-900 text-sm">💰 รายงานยอดขายและคำสั่งซื้อ (Sales Report)</h4>
+                <p class="text-[11px] text-slate-500">ประวัติคำสั่งซื้อทั้งหมด, ยอดเงิน, รหัส Stripe Charge ID และสถานะ PAID</p>
+              </div>
+            </div>
+            <span id="export-sales-count" class="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">0 คำสั่งซื้อ</span>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-200/60 flex items-center gap-2">
+            <button onclick="exportData('sales', 'csv')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+              <span>Export CSV (Excel)</span>
+            </button>
+            <button onclick="exportData('sales', 'json')" class="flex-1 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+              <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+              <span>Export JSON</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Export All Backup -->
+        <div class="p-3 bg-amber-50/70 border border-amber-200 rounded-2xl flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-2 text-amber-900 font-semibold text-[11px]">
+            <i data-lucide="database" class="w-4 h-4 text-amber-600"></i>
+            <span>สำรองข้อมูลระบบทั้งหมดรวมกัน (Full Backup):</span>
+          </div>
+          <button onclick="exportData('all', 'json')" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-[11px] rounded-xl transition">
+            Export All (JSON)
+          </button>
         </div>
       </div>
     </div>
@@ -2290,13 +2410,9 @@
 
             <!-- Import / Export Action Buttons -->
             <div class="flex flex-wrap items-center gap-2">
-              <button onclick="exportData('csv')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm">
-                <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-                <span>Export CSV</span>
-              </button>
-              <button onclick="exportData('json')" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm">
+              <button onclick="openExportModal()" class="px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md shadow-blue-500/20">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                <span>Export JSON</span>
+                <span>📥 ส่งออกข้อมูล (Export Data)</span>
               </button>
               <label class="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm cursor-pointer">
                 <i data-lucide="upload" class="w-3.5 h-3.5"></i>
@@ -2374,9 +2490,34 @@
                 </div>
               </div>
 
-              <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between gap-2">
-                <button onclick="exportData('csv')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">Export CSV</button>
-                <button onclick="exportData('json')" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition">Export JSON</button>
+              <div class="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-slate-700">ส่งออกข้อมูลแยกประเภท:</span>
+                  <button onclick="openExportModal()" class="text-[10px] text-blue-600 font-bold hover:underline">ศูนย์ส่งออกทั้งหมด</button>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5 text-center">
+                  <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span class="block text-[10px] font-bold text-slate-700 truncate">📦 สินค้า (${totalProducts})</span>
+                    <div class="flex gap-1 mt-1.5">
+                      <button onclick="exportData('products', 'csv')" class="flex-1 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[9px]">CSV</button>
+                      <button onclick="exportData('products', 'json')" class="flex-1 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-[9px]">JSON</button>
+                    </div>
+                  </div>
+                  <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span class="block text-[10px] font-bold text-slate-700 truncate">👥 ผู้ใช้ (${totalCustomers})</span>
+                    <div class="flex gap-1 mt-1.5">
+                      <button onclick="exportData('users', 'csv')" class="flex-1 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[9px]">CSV</button>
+                      <button onclick="exportData('users', 'json')" class="flex-1 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-bold text-[9px]">JSON</button>
+                    </div>
+                  </div>
+                  <div class="p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                    <span class="block text-[10px] font-bold text-slate-700 truncate">💰 ยอดขาย (${totalOrders})</span>
+                    <div class="flex gap-1 mt-1.5">
+                      <button onclick="exportData('sales', 'csv')" class="flex-1 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[9px]">CSV</button>
+                      <button onclick="exportData('sales', 'json')" class="flex-1 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded font-bold text-[9px]">JSON</button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2812,26 +2953,216 @@
     }
 
     // ========== IMPORT / EXPORT DATA ENGINE ==========
-    function exportData(format) {
-      let dataStr, filename, type;
-      if (format === 'json') {
-        dataStr = JSON.stringify({ products: state.products, orders: state.orders }, null, 2);
-        filename = `digital-store-export-${new Date().toISOString().slice(0,10)}.json`;
-        type = "application/json";
-      } else {
-        const headers = ["ID", "Title", "Category", "Author", "Price", "Rating", "FileType", "DownloadUrl"];
-        const rows = state.products.map(p => [p.id, `"${p.title}"`, p.category, `"${p.author || 'Store'}"`, p.price, p.rating, p.fileType, p.downloadUrl]);
-        dataStr = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-        filename = `digital-products-${new Date().toISOString().slice(0,10)}.csv`;
-        type = "text/csv;charset=utf-8;";
+    function openExportModal() {
+      const prodCount = state.products ? state.products.length : 0;
+      const elProd = document.getElementById('export-products-count');
+      if (elProd) elProd.innerText = `${prodCount} รายการ`;
+
+      const totalCust = (state.profiles && state.profiles.length > 0) ? state.profiles.length : new Set(state.orders.map(o => o.customerEmail)).size;
+      const elUsers = document.getElementById('export-users-count');
+      if (elUsers) elUsers.innerText = `${totalCust || 1} บัญชี`;
+
+      const elSales = document.getElementById('export-sales-count');
+      if (elSales) elSales.innerText = `${state.orders.length} คำสั่งซื้อ`;
+
+      const modal = document.getElementById('export-modal');
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeExportModal() {
+      const modal = document.getElementById('export-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function exportData(target = 'all', format = 'csv') {
+      // Auto-fallback if old call passed only 'csv' or 'json'
+      if (target === 'csv' || target === 'json') {
+        format = target;
+        target = 'products';
       }
 
-      const blob = new Blob([dataStr], { type });
+      // 1. Fetch fresh profiles if available
+      if ((target === 'users' || target === 'all') && window.supabaseService && window.supabaseService.isConfigured()) {
+        try {
+          const freshProfiles = await window.supabaseService.getProfiles();
+          if (freshProfiles && freshProfiles.length > 0) {
+            state.profiles = freshProfiles;
+          }
+        } catch(e) {
+          console.warn("Could not fetch remote profiles for export:", e);
+        }
+      }
+
+      // Prepare users list
+      let usersList = [];
+      if (state.profiles && state.profiles.length > 0) {
+        usersList = state.profiles.map(p => ({
+          id: p.id,
+          name: p.full_name || p.name || 'User',
+          email: p.email || (p.id ? `user-${p.id.slice(0,6)}@example.com` : 'user@example.com'),
+          role: p.role || 'user',
+          createdAt: p.created_at ? new Date(p.created_at).toLocaleDateString('th-TH') : '-'
+        }));
+      } else {
+        const usersMap = new Map();
+        if (state.currentUser) {
+          usersMap.set(state.currentUser.email, {
+            id: 'current-user',
+            name: state.currentUser.name || 'User',
+            email: state.currentUser.email,
+            role: state.currentUser.role || 'user',
+            createdAt: new Date().toLocaleDateString('th-TH')
+          });
+        }
+        state.orders.forEach((o, idx) => {
+          if (o.customerEmail && !usersMap.has(o.customerEmail)) {
+            usersMap.set(o.customerEmail, {
+              id: `cust-${idx+1}`,
+              name: o.customerName || 'Customer',
+              email: o.customerEmail,
+              role: 'user',
+              createdAt: o.date || new Date().toLocaleDateString('th-TH')
+            });
+          }
+        });
+        usersList = Array.from(usersMap.values());
+      }
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      let dataStr = "";
+      let filename = "";
+      let mimeType = "";
+
+      // ========== 1. EXPORT PRODUCTS (รายการสินค้า) ==========
+      if (target === 'products') {
+        if (format === 'json') {
+          dataStr = JSON.stringify(state.products, null, 2);
+          filename = `products_catalog_${dateStr}.json`;
+          mimeType = "application/json";
+        } else {
+          const headers = [
+            "รหัสสินค้า (ID)",
+            "ชื่อสินค้า (Title)",
+            "หมวดหมู่ (Category)",
+            "ราคาขายจริง (฿)",
+            "ผู้แต่ง/ผู้ลงขาย (Author)",
+            "อีเมลผู้ลงขาย (Creator Email)",
+            "คะแนน (Rating)",
+            "ยอดขาย (Sales Count)",
+            "ประเภทไฟล์ (FileType)",
+            "ลิงก์ดาวน์โหลด (DownloadUrl)"
+          ];
+          const rows = state.products.map(p => [
+            `"${p.id || ''}"`,
+            `"${(p.title || '').replace(/"/g, '""')}"`,
+            `"${(p.category || '').replace(/"/g, '""')}"`,
+            p.price || 0,
+            `"${(p.author || 'Store').replace(/"/g, '""')}"`,
+            `"${p.creatorEmail || ''}"`,
+            p.rating || 5.0,
+            p.salesCount || 0,
+            `"${p.fileType || 'PDF'}"`,
+            `"${p.downloadUrl || ''}"`
+          ]);
+          dataStr = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+          filename = `products_catalog_${dateStr}.csv`;
+          mimeType = "text/csv;charset=utf-8;";
+        }
+      }
+
+      // ========== 2. EXPORT USERS (รายชื่อผู้ใช้) ==========
+      else if (target === 'users') {
+        if (format === 'json') {
+          dataStr = JSON.stringify(usersList, null, 2);
+          filename = `users_list_${dateStr}.json`;
+          mimeType = "application/json";
+        } else {
+          const headers = [
+            "รหัสผู้ใช้งาน (User ID)",
+            "ชื่อ-นามสกุล (Name)",
+            "อีเมล (Email)",
+            "สิทธิ์การใช้งาน (Role)",
+            "วันที่สร้างบัญชี (Created Date)"
+          ];
+          const rows = usersList.map(u => [
+            `"${u.id || ''}"`,
+            `"${(u.name || '').replace(/"/g, '""')}"`,
+            `"${u.email || ''}"`,
+            `"${u.role || 'user'}"`,
+            `"${u.createdAt || ''}"`
+          ]);
+          dataStr = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+          filename = `users_list_${dateStr}.csv`;
+          mimeType = "text/csv;charset=utf-8;";
+        }
+      }
+
+      // ========== 3. EXPORT SALES (รายงานยอดขายและคำสั่งซื้อ) ==========
+      else if (target === 'sales') {
+        if (format === 'json') {
+          dataStr = JSON.stringify(state.orders, null, 2);
+          filename = `sales_report_${dateStr}.json`;
+          mimeType = "application/json";
+        } else {
+          const headers = [
+            "รหัสคำสั่งซื้อ (Order ID)",
+            "วันที่สั่งซื้อ (Date)",
+            "ชื่อลูกค้า (Customer Name)",
+            "อีเมลลูกค้า (Customer Email)",
+            "ยอดเงินรวม (Total ฿)",
+            "สถานะการชำระเงิน (Payment Status)",
+            "Stripe Charge ID",
+            "รายการสินค้าที่สั่งซื้อ (Items Summary)",
+            "จำนวนเล่มรวม (Total Units)"
+          ];
+          const rows = state.orders.map(o => {
+            const itemsSummary = (o.items || []).map(i => `${i.title} (x${i.quantity || 1})`).join('; ');
+            const totalUnits = (o.items || []).reduce((sum, i) => sum + (i.quantity || 1), 0);
+            return [
+              `"${o.id || o.orderId || ''}"`,
+              `"${o.date || (o.createdAt ? new Date(o.createdAt).toLocaleDateString('th-TH') : '')}"`,
+              `"${(o.customerName || '').replace(/"/g, '""')}"`,
+              `"${o.customerEmail || ''}"`,
+              o.totalAmount || 0,
+              `"${o.paymentStatus || 'PAID'}"`,
+              `"${o.stripeChargeId || o.chargeId || ''}"`,
+              `"${itemsSummary.replace(/"/g, '""')}"`,
+              totalUnits
+            ];
+          });
+          dataStr = [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+          filename = `sales_report_${dateStr}.csv`;
+          mimeType = "text/csv;charset=utf-8;";
+        }
+      }
+
+      // ========== 4. EXPORT ALL (ข้อมูลทั้งหมด) ==========
+      else {
+        if (format === 'json') {
+          dataStr = JSON.stringify({
+            exportedAt: new Date().toISOString(),
+            products: state.products,
+            users: usersList,
+            orders: state.orders
+          }, null, 2);
+          filename = `complete_store_backup_${dateStr}.json`;
+          mimeType = "application/json";
+        } else {
+          return exportData('products', 'csv');
+        }
+      }
+
+      // Prepend UTF-8 BOM (\uFEFF) for CSV to guarantee Thai characters display perfectly in Excel
+      const content = (format === 'csv') ? "\uFEFF" + dataStr : dataStr;
+      const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
 

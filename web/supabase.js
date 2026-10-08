@@ -5,11 +5,11 @@
 
 const SUPABASE_STORAGE_KEY = 'ebook_supabase_config';
 
-// Default configuration (can be updated dynamically in UI settings)
+// Default configuration pre-wired with active project credentials
 const DEFAULT_SUPABASE_CONFIG = {
-  url: 'https://xyzcompany.supabase.co', // Replace with your Supabase Project URL
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...', // Replace with your Supabase Public Anon Key
-  connected: false
+  url: 'https://uwdbpveyurhtsevpcint.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV3ZGJwdmV5dXJodHNldnBjaW50Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0MzQ5NzEsImV4cCI6MjEwNzAxMDk3MX0.Nhe9BySFPIUIiwfbLXONd3JNHb0dsx7iPs2iw7PlPnA',
+  connected: true
 };
 
 class SupabaseService {
