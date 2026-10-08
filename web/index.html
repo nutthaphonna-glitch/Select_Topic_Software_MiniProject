@@ -18,6 +18,8 @@
   <!-- Supabase BaaS Client (PostgreSQL / Auth / Realtime) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js?v=3"></script>
+  <!-- Resend Automated Email Receipts -->
+  <script src="resend.js?v=1"></script>
 
   <script>
     tailwind.config = {
@@ -215,6 +217,12 @@
                   <span id="sb-nav-text" class="hidden sm:inline font-mono text-[11px]">Supabase</span>
                 </button>
 
+                <!-- Resend Email Status Button -->
+                <button onclick="openResendModal()" id="web-resend-status-btn" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold border transition bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 shadow-sm" title="ตั้งค่าระบบส่งอีเมล Resend">
+                  <i data-lucide="mail" class="w-3.5 h-3.5 text-sky-600"></i>
+                  <span id="resend-nav-text" class="hidden sm:inline font-mono text-[11px]">Resend</span>
+                </button>
+
                 <!-- Cart Button -->
                 <button onclick="openCartModal()" class="relative p-2 text-slate-700 hover:text-blue-600 hover:bg-slate-100 rounded-full transition" title="ตะกร้าสินค้า">
                   <i data-lucide="shopping-cart" class="w-5 h-5"></i>
@@ -242,6 +250,10 @@
             <button onclick="openSupabaseModal(); toggleMobileNav();" class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-100/60 flex items-center space-x-2">
               <i data-lucide="database" class="w-4 h-4 text-emerald-600"></i>
               <span>ฐานข้อมูล: Supabase BaaS</span>
+            </button>
+            <button onclick="openResendModal(); toggleMobileNav();" class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-sky-700 hover:bg-sky-100/60 flex items-center space-x-2">
+              <i data-lucide="mail" class="w-4 h-4 text-sky-600"></i>
+              <span>ระบบส่งอีเมล: Resend Email API</span>
             </button>
             <button onclick="navigateTo('store'); toggleMobileNav();" class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200/60 flex items-center space-x-2">
               <i data-lucide="home" class="w-4 h-4 text-blue-600"></i>
@@ -460,6 +472,71 @@
     </div>
   </div>
 
+  <!-- ================= RESEND EMAIL MODAL ================= -->
+  <div id="resend-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-200">
+      <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-700 p-6 text-white relative">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+              <i data-lucide="mail-check" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg">Resend Email Integration</h3>
+              <p class="text-xs text-blue-100">ระบบส่งใบเสร็จ & ยืนยันการสั่งซื้ออัตโนมัติ</p>
+            </div>
+          </div>
+          <button onclick="closeResendModal()" class="p-2 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <!-- Status Banner -->
+        <div id="resend-status-banner" class="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-2">
+            <span id="resend-status-dot" class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+            <span id="resend-status-text" class="font-bold text-sky-800">พร้อมใช้งาน (Resend Email API)</span>
+          </div>
+          <span class="text-[10px] bg-white px-2 py-0.5 rounded-md font-semibold text-slate-600 border border-slate-200">Transactional</span>
+        </div>
+
+        <form onsubmit="handleSaveResendConfig(event)" class="space-y-3.5 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Resend API Key (starts with re_...)</label>
+            <input type="password" id="resend-input-key" placeholder="re_1234567890abcdef..." class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-[11px]" />
+            <p class="text-[10px] text-slate-400 mt-1">รับคีย์ฟรีได้ที่ <a href="https://resend.com/api-keys" target="_blank" class="text-blue-600 underline font-semibold">resend.com/api-keys</a></p>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">อีเมลผู้ส่ง (Sender Email)</label>
+            <input type="text" id="resend-input-from" placeholder="E-Book Store <onboarding@resend.dev>" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-[11px]" />
+            <p class="text-[10px] text-slate-400 mt-1">ค่าเริ่มต้นใช้: <code class="bg-slate-100 px-1 py-0.5 rounded">E-Book Store &lt;onboarding@resend.dev&gt;</code> (สำหรับทดสอบ)</p>
+          </div>
+
+          <div class="flex items-center space-x-2 pt-2">
+            <button type="submit" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-md shadow-blue-500/20 text-xs">
+              บันทึกการตั้งค่า
+            </button>
+            <button type="button" onclick="testResendCurrentConfig()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition text-xs flex items-center space-x-1.5">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>ส่งอีเมลทดสอบ</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="border-t border-slate-100 pt-3 text-[11px] text-slate-500 space-y-1.5">
+          <div class="font-semibold text-slate-700 flex items-center space-x-1">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-blue-600"></i>
+            <span>ระบบทำงานอัตโนมัติ:</span>
+          </div>
+          <p class="text-slate-500">เมื่อลูกค้ากดชำระเงินสำเร็จผ่าน Stripe ระบบจะจัดส่งใบเสร็จรับเงินพร้อมลิงก์ดาวน์โหลด E-Book ไปยังอีเมลของลูกค้าทันทีผ่าน Resend</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= CART MODAL ================= -->
   <div id="cart-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-end">
     <div class="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
@@ -603,6 +680,15 @@
           <span class="text-slate-500">อีเมลจัดส่ง:</span>
           <span class="font-medium text-slate-800" id="success-cust-email">-</span>
         </div>
+      </div>
+
+      <!-- Resend Email Status Badge -->
+      <div id="receipt-email-status-box" class="p-2.5 rounded-xl bg-sky-50 border border-sky-100 text-[11px] text-sky-800 flex items-center justify-between my-3">
+        <div class="flex items-center space-x-1.5">
+          <i data-lucide="mail" class="w-4 h-4 text-sky-600"></i>
+          <span id="receipt-email-status-text">กำลังจัดส่งใบเสร็จรับเงินทางอีเมล (Resend)...</span>
+        </div>
+        <span class="text-[10px] bg-sky-200/60 text-sky-900 px-1.5 py-0.5 rounded font-mono font-semibold">Resend</span>
       </div>
 
       <div class="space-y-2">
@@ -765,6 +851,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       loadInitialData();
       await checkAuthSession();
+      updateResendStatusUI();
       renderAllViews();
       lucide.createIcons();
     });
@@ -1057,6 +1144,76 @@
       if (window.supabaseService) {
         const res = await window.supabaseService.testConnection(url, key);
         alert(res.success ? "✓ " + res.message : "✕ " + res.message);
+      }
+    }
+
+    // ========== RESEND EMAIL CONFIG & UI LOGIC ==========
+    function updateResendStatusUI() {
+      const isConfig = window.resendService && window.resendService.isConfigured();
+      const navText = document.getElementById('resend-nav-text');
+      const dot = document.getElementById('resend-status-dot');
+      const statusText = document.getElementById('resend-status-text');
+
+      if (isConfig) {
+        if (navText) navText.innerText = "Resend (Ready)";
+        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+        if (statusText) statusText.innerText = "🟢 เชื่อมต่อ Resend API Key พร้อมส่งอีเมล";
+      } else {
+        if (navText) navText.innerText = "Resend (Setup)";
+        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+        if (statusText) statusText.innerText = "⚙️ ยังไม่ได้ระบุ API Key (ใส่คีย์ re_... เพื่อเริ่มส่ง)";
+      }
+    }
+
+    function openResendModal() {
+      const cfg = window.resendService ? window.resendService.config : {};
+      const keyInput = document.getElementById('resend-input-key');
+      const fromInput = document.getElementById('resend-input-from');
+      if (keyInput) keyInput.value = cfg.apiKey || '';
+      if (fromInput) fromInput.value = cfg.fromEmail || 'E-Book Store <onboarding@resend.dev>';
+      updateResendStatusUI();
+      document.getElementById('resend-modal').classList.remove('hidden');
+    }
+
+    function closeResendModal() {
+      document.getElementById('resend-modal').classList.add('hidden');
+    }
+
+    function handleSaveResendConfig(e) {
+      e.preventDefault();
+      const key = document.getElementById('resend-input-key').value.trim();
+      const fromEmail = document.getElementById('resend-input-from').value.trim();
+      if (!key) {
+        alert("กรุณาระบุ Resend API Key (ขึ้นต้นด้วย re_...)");
+        return;
+      }
+      if (window.resendService) {
+        window.resendService.saveConfig(key, fromEmail);
+        updateResendStatusUI();
+        alert("บันทึกการตั้งค่า Resend เรียบร้อยแล้ว! ระบบพร้อมส่งใบเสร็จรับเงินทางอีเมลอัตโนมัติ");
+        closeResendModal();
+      }
+    }
+
+    async function testResendCurrentConfig() {
+      const key = document.getElementById('resend-input-key').value.trim();
+      const fromEmail = document.getElementById('resend-input-from').value.trim();
+      if (!key) {
+        alert("กรุณาระบุ Resend API Key ก่อนทดสอบ");
+        return;
+      }
+      const testEmail = prompt("ระบุอีเมลสำหรับรับข้อความทดสอบ (เช่น อีเมลของคุณ):", state.currentUser?.email || "nutthaphon.na@rmuti.ac.th");
+      if (!testEmail || !testEmail.includes('@')) return;
+
+      if (window.resendService) {
+        window.resendService.saveConfig(key, fromEmail);
+        alert(`กำลังส่งอีเมลทดสอบไปยัง ${testEmail}... (กรุณารอสักครู่)`);
+        const res = await window.resendService.sendTestEmail(testEmail);
+        if (res.success) {
+          alert(`✓ ส่งอีเมลทดสอบสำเร็จ!\nกรุณาตรวจสอบกล่องจดหมายที่: ${testEmail}\n(หากไม่พบ ให้ตรวจในโฟลเดอร์ Junk/Spam)`);
+        } else {
+          alert(`✕ ส่งอีเมลไม่สำเร็จ:\n${res.message}\n\n*หมายเหตุสำหรับ Resend ฟรี (ยังไม่ได้ผูกโดเมน): จะส่งได้เฉพาะไปยังอีเมลที่ใช้สมัครบัญชี Resend เท่านั้นครับ`);
+        }
       }
     }
 
@@ -2220,6 +2377,36 @@
         saveOrders();
         if (window.supabaseService) {
           window.supabaseService.insertOrder(newOrder);
+        }
+
+        // Trigger automated email receipt via Resend
+        if (window.resendService) {
+          const emailStatusText = document.getElementById('receipt-email-status-text');
+          const emailStatusBox = document.getElementById('receipt-email-status-box');
+          if (emailStatusText) emailStatusText.innerText = `กำลังส่งใบเสร็จไปยัง ${custEmail} (Resend)...`;
+
+          window.resendService.sendOrderReceipt(newOrder).then(res => {
+            const currentStatusText = document.getElementById('receipt-email-status-text');
+            const currentStatusBox = document.getElementById('receipt-email-status-box');
+            if (!currentStatusText) return;
+
+            if (res.success) {
+              currentStatusText.innerText = `✅ จัดส่งใบเสร็จไปยัง ${custEmail} สำเร็จเรียบร้อย`;
+              if (currentStatusBox) {
+                currentStatusBox.className = "p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 flex items-center justify-between my-3";
+              }
+            } else if (res.notConfigured) {
+              currentStatusText.innerText = `⚠️ ยังไม่ได้ใส่ Resend API Key (คลิกปุ่ม Resend เพื่อตั้งค่า)`;
+              if (currentStatusBox) {
+                currentStatusBox.className = "p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-center justify-between my-3";
+              }
+            } else {
+              currentStatusText.innerText = `⚠️ ส่งอีเมลไม่สำเร็จ: ${res.message || 'เกิดข้อผิดพลาด'}`;
+              if (currentStatusBox) {
+                currentStatusBox.className = "p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-800 flex items-center justify-between my-3";
+              }
+            }
+          });
         }
 
         state.lastPlacedOrderId = newOrderId;

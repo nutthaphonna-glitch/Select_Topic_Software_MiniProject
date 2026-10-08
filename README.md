@@ -58,6 +58,13 @@
 - **Supabase Auth**: ระบบสมาชิกผ่าน Email/Password และ OAuth
 - **Supabase Realtime**: รับการแจ้งเตือนคำสั่งซื้อใหม่แบบสดๆ ทันทีที่ลูกค้าชำระเงินผ่าน Stripe
 - **SQL Schema Script**: ไฟล์ [supabase_schema.sql](file:///e:/Select_Topic_Project/supabase_schema.sql) พร้อม Seed ข้อมูลและ RLS Policies สำหรับรันบน Supabase SQL Editor
+
+### 9. 📧 Resend Automated Email Receipts (ระบบส่งใบเสร็จ & ยืนยันการสั่งซื้อ)
+- **Resend Email API**: ส่งอีเมลยืนยันการซื้อขาย (Order Confirmation & Receipt) อัตโนมัติทันทีที่ลูกค้าชำระเงินผ่าน Stripe
+- **Vercel Serverless Function**: รองรับ Endpoint [`api/send-receipt.js`](file:///e:/Select_Topic_Project/api/send-receipt.js) บน Vercel พร้อมระบบจัดการ CORS และความปลอดภัย
+- **Modern HTML Email Template**: ใบเสร็จดีไซน์พรีเมียม สรุปรายการสินค้า, ยอดเงิน, รหัสคำสั่งซื้อ, Stripe Charge ID, และปุ่มกดดาวน์โหลด E-Book ทันที
+- **UI Settings Modal**: มีปุ่มกดตั้งค่า **📧 Resend** บนแถบเมนู เพื่อใส่ Resend API Key (`re_...`) และทดสอบส่งอีเมลได้ทันที
+
 - **Dual Engine Architecture**: สลับและซิงค์ข้อมูลระหว่าง Local Offline Cache และ Supabase Cloud ได้อย่างไร้รอยต่อ
 
 ---

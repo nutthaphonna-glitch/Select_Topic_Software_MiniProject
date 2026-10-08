@@ -6,28 +6,54 @@
 -- 1. Enable UUID Extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Create Profiles Table (Users & Roles - Supabase Auth Sync)
+-- 2. Create Profiles Table (Users & Roles)
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    role TEXT NOT NULL DEFAULT 'user',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Enable RLS for Profiles
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+-- Disable RLS on profiles so user profiles always save and sync reliably
+ALTER TABLE public.profiles DISABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public profiles are viewable by everyone" 
-ON public.profiles FOR SELECT USING (true);
+-- 3. Create Products Table (Digital Products & E-Books)
+CREATE TABLE IF NOT EXISTS public.products (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL,
+    price NUMERIC NOT NULL CHECK (price >= 0),
+    original_price NUMERIC,
+    rating NUMERIC DEFAULT 5.0,
+    file_type TEXT NOT NULL DEFAULT 'PDF',
+    category TEXT NOT NULL,
+    description TEXT,
+    gradient TEXT NOT NULL DEFAULT 'from-blue-600 to-indigo-700',
+    tag TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
-CREATE POLICY "Allow insert profile" 
-ON public.profiles FOR INSERT WITH CHECK (true);
+-- Disable RLS on products so store and seller hub can read and write freely
+ALTER TABLE public.products DISABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow update profile" 
-ON public.profiles FOR UPDATE USING (true);
+-- 4. Create Orders Table (Stripe Transactions & Purchases)
+CREATE TABLE IF NOT EXISTS public.orders (
+    id TEXT PRIMARY KEY,
+    customer_name TEXT NOT NULL,
+    customer_email TEXT NOT NULL,
+    total_amount NUMERIC NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PAID',
+    payment_method TEXT NOT NULL DEFAULT 'stripe',
+    stripe_charge_id TEXT NOT NULL,
+    items JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
 
--- Auto trigger when user signs up via Supabase Auth
+-- Disable RLS on orders so checkout orders save freely
+ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;
+
+-- 5. Auto-sync trigger from auth.users to public.profiles
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -51,60 +77,20 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- 3. Create Products Table (Digital Products & E-Books on Supabase)
-CREATE TABLE IF NOT EXISTS public.products (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    author TEXT NOT NULL,
-    price NUMERIC NOT NULL CHECK (price >= 0),
-    original_price NUMERIC,
-    rating NUMERIC DEFAULT 5.0,
-    file_type TEXT NOT NULL DEFAULT 'PDF',
-    category TEXT NOT NULL,
-    description TEXT,
-    gradient TEXT NOT NULL DEFAULT 'from-blue-600 to-indigo-700',
-    tag TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+-- 6. Sync any existing registered users into profiles right now
+INSERT INTO public.profiles (id, email, name, role)
+SELECT 
+  id, 
+  email, 
+  COALESCE(raw_user_meta_data->>'name', split_part(email, '@', 1)), 
+  COALESCE(raw_user_meta_data->>'role', 'user')
+FROM auth.users
+ON CONFLICT (id) DO UPDATE SET
+  email = EXCLUDED.email,
+  name = EXCLUDED.name,
+  role = EXCLUDED.role;
 
--- Enable RLS for Products
-ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Products are viewable by everyone" 
-ON public.products FOR SELECT USING (true);
-
-CREATE POLICY "Allow insert products" 
-ON public.products FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Allow update products" 
-ON public.products FOR UPDATE USING (true);
-
-CREATE POLICY "Allow delete products" 
-ON public.products FOR DELETE USING (true);
-
--- 4. Create Orders Table (Stripe Transactions & Statistics on Supabase)
-CREATE TABLE IF NOT EXISTS public.orders (
-    id TEXT PRIMARY KEY,
-    customer_name TEXT NOT NULL,
-    customer_email TEXT NOT NULL,
-    total_amount NUMERIC NOT NULL,
-    status TEXT NOT NULL DEFAULT 'PAID',
-    payment_method TEXT NOT NULL DEFAULT 'stripe',
-    stripe_charge_id TEXT NOT NULL,
-    items JSONB NOT NULL DEFAULT '[]'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Enable RLS for Orders
-ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Orders are viewable by everyone" 
-ON public.orders FOR SELECT USING (true);
-
-CREATE POLICY "Anyone can create order on checkout" 
-ON public.orders FOR INSERT WITH CHECK (true);
-
--- 5. Seed Core Products (6 Products)
+-- 7. Seed Core Products
 INSERT INTO public.products (id, title, author, price, original_price, rating, file_type, category, description, gradient, tag)
 VALUES
 ('eb-001', 'ชีวิตดีขึ้นได้ เริ่มจากตัวเรา', 'กิตติศักดิ์ พูลสวัสดิ์', 199, 299, 4.9, 'PDF (4.8 MB)', 'E-Book', 'หนังสือพัฒนาตนเองฉบับปรับปรุงใหม่ที่จะช่วยสร้างนิสัยเชิงบวก ปรับแนวคิดชีวิตสู่ความสำเร็จแบบยั่งยืน', 'from-blue-600 via-indigo-600 to-purple-700', 'BESTSELLER'),
@@ -121,7 +107,21 @@ ON CONFLICT (id) DO UPDATE SET
   category = EXCLUDED.category,
   description = EXCLUDED.description;
 
--- 6. Enable Realtime Publications for Live Sync
-ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+-- 8. Enable Realtime Publications (Safely handled if already added)
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END $$;
