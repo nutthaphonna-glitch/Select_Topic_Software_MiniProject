@@ -31,8 +31,12 @@ CREATE TABLE IF NOT EXISTS public.products (
     description TEXT,
     gradient TEXT NOT NULL DEFAULT 'from-blue-600 to-indigo-700',
     tag TEXT,
+    creator_email TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Ensure creator_email exists if table was already created
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS creator_email TEXT;
 
 -- Disable RLS on products so store and seller hub can read and write freely
 ALTER TABLE public.products DISABLE ROW LEVEL SECURITY;

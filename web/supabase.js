@@ -109,7 +109,8 @@ class SupabaseService {
             description: item.description,
             downloadUrl: '/downloads/life-better-start-from-us.pdf',
             coverGradient: item.gradient || 'from-blue-600 to-indigo-700',
-            badge: item.tag || 'ยอดนิยม'
+            badge: item.tag || 'ยอดนิยม',
+            creatorEmail: item.creator_email || null
           }));
         }
       } catch (e) {
@@ -133,7 +134,8 @@ class SupabaseService {
           category: product.category,
           description: product.description,
           gradient: product.coverGradient || product.gradient || 'from-blue-600 to-indigo-700',
-          tag: product.badge || product.tag || null
+          tag: product.badge || product.tag || null,
+          creator_email: product.creatorEmail || null
         };
         const { data, error } = await this.client.from('products').insert([payload]).select();
         if (error) throw error;

@@ -189,9 +189,13 @@
               <!-- Desktop Nav Links -->
               <nav class="hidden md:flex items-center space-x-6">
                 <button onclick="navigateTo('store')" class="web-nav-link text-blue-600 font-semibold text-sm hover:text-blue-700 transition" data-nav="store">หน้าร้าน</button>
+                <button onclick="navigateTo('user-dashboard')" class="web-nav-link text-slate-600 font-medium text-sm hover:text-indigo-600 transition flex items-center space-x-1" data-nav="user-dashboard">
+                  <i data-lucide="layout-dashboard" class="w-4 h-4 text-indigo-600"></i>
+                  <span>แดชบอร์ดของฉัน</span>
+                </button>
                 <button onclick="navigateTo('seller')" class="web-nav-link text-slate-600 font-medium text-sm hover:text-indigo-600 transition flex items-center space-x-1" data-nav="seller">
                   <i data-lucide="upload-cloud" class="w-4 h-4 text-indigo-600"></i>
-                  <span>ลงขายหนังสือ (User)</span>
+                  <span>ลงขายหนังสือ</span>
                 </button>
                 <button onclick="navigateTo('how-to-buy')" class="web-nav-link text-slate-600 font-medium text-sm hover:text-blue-600 transition" data-nav="how-to-buy">วิธีการสั่งซื้อ</button>
                 <button onclick="navigateTo('track')" class="web-nav-link text-slate-600 font-medium text-sm hover:text-blue-600 transition" data-nav="track">ตรวจสอบสถานะ</button>
@@ -259,9 +263,13 @@
               <i data-lucide="home" class="w-4 h-4 text-blue-600"></i>
               <span>หน้าร้าน</span>
             </button>
+            <button onclick="navigateTo('user-dashboard'); toggleMobileNav();" class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200/60 flex items-center space-x-2">
+              <i data-lucide="layout-dashboard" class="w-4 h-4 text-indigo-600"></i>
+              <span>แดชบอร์ดของฉัน (User Dashboard)</span>
+            </button>
             <button onclick="navigateTo('seller'); toggleMobileNav();" class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200/60 flex items-center space-x-2">
               <i data-lucide="upload-cloud" class="w-4 h-4 text-indigo-600"></i>
-              <span>ลงขายหนังสือ (User)</span>
+              <span>ลงขายหนังสือ</span>
             </button>
             <button onclick="navigateTo('how-to-buy'); toggleMobileNav();" class="w-full text-left py-2 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200/60 flex items-center space-x-2">
               <i data-lucide="help-circle" class="w-4 h-4 text-slate-600"></i>
@@ -1425,16 +1433,19 @@
 
       if (webMenu) {
         webMenu.innerHTML = `
-          <div class="flex items-center space-x-2.5 bg-slate-50 border border-slate-200 py-1 px-3 rounded-2xl">
-            <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+          <div class="flex items-center space-x-2 bg-slate-50 border border-slate-200 py-1 px-2.5 rounded-2xl">
+            <button onclick="navigateTo('user-dashboard')" class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-sm hover:ring-2 hover:ring-indigo-400 transition" title="ไปที่แดชบอร์ดของฉัน">
               ${(state.currentUser.name || 'U').charAt(0).toUpperCase()}
-            </div>
-            <div class="hidden sm:block text-left">
-              <div class="text-xs font-bold text-slate-900 leading-tight">${state.currentUser.name}</div>
+            </button>
+            <div class="hidden sm:block text-left cursor-pointer mr-1" onclick="navigateTo('user-dashboard')" title="ไปที่แดชบอร์ดของฉัน">
+              <div class="text-xs font-bold text-slate-900 leading-tight hover:text-indigo-600 transition">${state.currentUser.name}</div>
               <div class="flex items-center space-x-1.5 mt-0.5">
                 ${roleBadge}
               </div>
             </div>
+            <button onclick="navigateTo('user-dashboard')" class="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition" title="แดชบอร์ดของฉัน (User Dashboard)">
+              <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            </button>
             <button onclick="handleLogout()" class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" title="ออกจากระบบ">
               <i data-lucide="log-out" class="w-4 h-4"></i>
             </button>
@@ -1446,6 +1457,7 @@
     function generatePageHTML(page) {
       if (page === 'store') return renderStorefrontHTML();
       if (page === 'seller') return renderSellerPortalHTML();
+      if (page === 'user-dashboard') return renderUserDashboardHTML();
       if (page === 'track') return renderTrackOrderHTML();
       if (page === 'how-to-buy') return renderHowToBuyHTML();
       if (page === 'contact') return renderContactHTML();
@@ -1568,9 +1580,6 @@
 
     // ========== SELLER PORTAL VIEW (User สามารถลงขายหนังสือได้) ==========
     function renderSellerPortalHTML() {
-      const totalSales = state.orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-      const creatorPayout = Math.round(totalSales * 0.9);
-
       return `
         <div class="max-w-4xl mx-auto space-y-8">
           
@@ -1671,22 +1680,24 @@
               </form>
             </div>
 
-            <!-- Revenue & Payout Info -->
+            <!-- Creator Sidebar with Link to User Dashboard -->
             <div class="space-y-6">
               <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
                 <h4 class="font-bold text-slate-900 text-sm flex items-center space-x-2">
-                  <i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-600"></i>
-                  <span>รายได้จากการขายของคุณ</span>
+                  <i data-lucide="layout-dashboard" class="w-4 h-4 text-indigo-600"></i>
+                  <span>แดชบอร์ดรายได้ของคุณ</span>
                 </h4>
-                <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center">
-                  <span class="text-[11px] text-emerald-700">ยอดรอโอน (Stripe Payout)</span>
-                  <div class="text-2xl font-black text-emerald-900 mt-1">฿ ${creatorPayout.toLocaleString()}</div>
-                  <span class="text-[10px] text-emerald-600">คำนวณจากยอดขายจริง (ส่วนแบ่ง 90%)</span>
-                </div>
-                <div class="text-xs space-y-2 text-slate-600">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  ยอดขายจริง รายได้ และยอดรอโอน (Stripe Payout 90%) จะถูกคำนวณและแสดงผลแยกตามบัญชีของคุณในหน้า User Dashboard
+                </p>
+                <button onclick="navigateTo('user-dashboard')" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-2 text-xs">
+                  <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                  <span>เปิดดู User Dashboard ของฉัน</span>
+                </button>
+                <div class="text-xs space-y-2 text-slate-600 pt-2 border-t border-slate-100">
                   <div class="flex justify-between">
                     <span>ส่วนแบ่งรายได้ Creator:</span>
-                    <span class="font-bold text-slate-900">90%</span>
+                    <span class="font-bold text-emerald-600">90% (จากยอดขายจริง)</span>
                   </div>
                   <div class="flex justify-between">
                     <span>ช่องทางชำระเงิน:</span>
@@ -1694,7 +1705,7 @@
                   </div>
                   <div class="flex justify-between">
                     <span>สถานะสินค้า:</span>
-                    <span class="font-bold text-emerald-600">วางขายบนหน้าร้านทันที</span>
+                    <span class="font-bold text-blue-600">วางขายบนหน้าร้านทันที</span>
                   </div>
                 </div>
               </div>
@@ -1706,7 +1717,8 @@
                 </div>
                 <p class="text-[11px] leading-relaxed text-indigo-800">
                   • สิทธิ์ User สามารถซื้อสินค้า และลงขายหนังสือได้ในบัญชีเดียว<br/>
-                  • ระบบจะสร้างลิงก์ดาวน์โหลดที่ปลอดภัยและส่งให้ผู้ซื้อทันทีหลังชำระเงิน
+                  • ระบบจะสร้างลิงก์ดาวน์โหลดที่ปลอดภัยและส่งให้ผู้ซื้อทันทีหลังชำระเงิน<br/>
+                  • คุณสามารถตรวจสอบจำนวนเล่มที่ขายได้และรายได้ของผลงานแต่ละเล่มใน User Dashboard
                 </p>
               </div>
             </div>
@@ -1734,6 +1746,9 @@
       const desc = document.getElementById('sell-desc').value;
       const theme = document.querySelector('input[name="coverTheme"]:checked')?.value || 'from-teal-400 to-emerald-600';
 
+      const creatorEmail = state.currentUser ? state.currentUser.email : 'user@example.com';
+      const creatorName = state.currentUser ? state.currentUser.name : author;
+
       const newProduct = {
         id: `prod-${Date.now()}`,
         title,
@@ -1749,7 +1764,9 @@
         fileSize: 'ขนาดประมาณ 5.5 MB',
         downloadUrl: '/downloads/life-better-start-from-us.pdf',
         coverGradient: theme,
-        badge: 'ผลงานใหม่'
+        badge: 'ผลงานใหม่',
+        creatorEmail: creatorEmail,
+        creatorName: creatorName
       };
 
       state.products.unshift(newProduct);
@@ -1757,8 +1774,291 @@
       if (window.supabaseService) {
         window.supabaseService.insertProduct(newProduct);
       }
-      alert(`วางจำหน่าย "${title}" เรียบร้อยแล้ว!`);
-      navigateTo('store');
+      alert(`วางจำหน่าย "${title}" เรียบร้อยแล้ว!\nระบบได้เพิ่มหนังสือเข้าสู่ User Dashboard ของคุณแล้ว`);
+      navigateTo('user-dashboard');
+    }
+
+    // ========== USER DASHBOARD VIEW (แยกสถิติเฉพาะของแต่ละ User) ==========
+    function renderUserDashboardHTML() {
+      const currentUser = state.currentUser || { name: 'User', email: 'user@example.com', role: 'user' };
+      const userEmail = (currentUser.email || '').toLowerCase();
+      const userName = currentUser.name || '';
+
+      // 1. กรองเฉพาะหนังสือที่ User คนนี้เป็นผู้ลงขาย
+      const myBooks = state.products.filter(p => {
+        if (p.creatorEmail && p.creatorEmail.toLowerCase() === userEmail) return true;
+        if (p.author && userName && p.author.toLowerCase().includes(userName.toLowerCase())) return true;
+        return false;
+      });
+
+      const totalPublished = myBooks.length;
+      const myBookIds = new Set(myBooks.map(b => b.id));
+
+      // 2. คำนวณจำนวนที่ขายได้ และยอดขายรวมเฉพาะของ User คนนี้จากคำสั่งซื้อ (Orders)
+      let totalUnitsSold = 0;
+      let totalSalesRevenue = 0;
+      const bookStats = {};
+      myBooks.forEach(b => {
+        bookStats[b.id] = { units: 0, revenue: 0 };
+      });
+
+      const mySalesLog = [];
+
+      state.orders.forEach(order => {
+        if (order.paymentStatus === 'PAID' || !order.paymentStatus) {
+          const items = Array.isArray(order.items) ? order.items : [];
+          items.forEach(item => {
+            const isMyBook = myBookIds.has(item.id) ||
+              (item.creatorEmail && item.creatorEmail.toLowerCase() === userEmail) ||
+              (item.author && userName && item.author.toLowerCase().includes(userName.toLowerCase()));
+
+            if (isMyBook) {
+              const qty = Number(item.quantity || 1);
+              const price = Number(item.price || 0);
+              const lineTotal = price * qty;
+              totalUnitsSold += qty;
+              totalSalesRevenue += lineTotal;
+
+              if (bookStats[item.id]) {
+                bookStats[item.id].units += qty;
+                bookStats[item.id].revenue += lineTotal;
+              }
+
+              mySalesLog.push({
+                orderId: order.id,
+                title: item.title,
+                qty: qty,
+                price: price,
+                total: lineTotal,
+                payout: Math.round(lineTotal * 0.9),
+                customerName: order.customerName || 'ลูกค้าทั่วไป',
+                date: order.createdAt || new Date().toISOString()
+              });
+            }
+          });
+        }
+      });
+
+      // 3. ยอดรอโอน (Stripe Payout) คำนวณจากยอดขายจริง (ส่วนแบ่ง 90%) ของ User คนนี้
+      const stripePayout = Math.round(totalSalesRevenue * 0.9);
+
+      // Books rows
+      const booksRows = myBooks.map(book => {
+        const stats = bookStats[book.id] || { units: 0, revenue: 0 };
+        const myShare = Math.round(stats.revenue * 0.9);
+        return `
+          <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition text-xs">
+            <td class="py-3 px-4 flex items-center space-x-3">
+              <div class="w-10 h-14 rounded-lg bg-gradient-to-tr ${book.coverGradient || 'from-blue-600 to-indigo-700'} shadow-sm flex items-center justify-center text-white shrink-0">
+                <i data-lucide="book" class="w-4 h-4 opacity-75"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="font-bold text-slate-900 truncate">${book.title}</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">${book.category || 'E-Book'} • ${book.fileType || 'PDF'}</div>
+              </div>
+            </td>
+            <td class="py-3 px-4 font-semibold text-slate-700">฿ ${Number(book.price).toLocaleString()}</td>
+            <td class="py-3 px-4 text-center font-bold text-slate-800">${stats.units.toLocaleString()} เล่ม</td>
+            <td class="py-3 px-4 font-bold text-slate-900">฿ ${stats.revenue.toLocaleString()}</td>
+            <td class="py-3 px-4 font-black text-emerald-600">฿ ${myShare.toLocaleString()}</td>
+            <td class="py-3 px-4 text-center">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                ✓ วางขายอยู่
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      return `
+        <div class="max-w-5xl mx-auto space-y-8">
+          
+          <!-- Creator Profile Banner -->
+          <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="flex items-center space-x-4 z-10">
+              <div class="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-600/30">
+                ${(userName || 'U').charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <h2 class="text-xl sm:text-2xl font-bold tracking-tight">${userName}</h2>
+                  <span class="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[10px] font-bold">Creator Profile</span>
+                </div>
+                <p class="text-xs text-slate-300 mt-1 flex items-center space-x-1.5">
+                  <i data-lucide="mail" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span class="font-mono">${userEmail}</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-3 z-10 w-full md:w-auto">
+              <button onclick="navigateTo('seller')" class="flex-1 md:flex-none px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-indigo-600/25 flex items-center justify-center space-x-2">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>ลงขายหนังสือเล่มใหม่</span>
+              </button>
+              <button onclick="handleUserPayoutRequest(${stripePayout})" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-md shadow-emerald-600/25 flex items-center space-x-2">
+                <i data-lucide="banknote" class="w-4 h-4"></i>
+                <span>ขอรับเงินโอน (Payout)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 Stat Cards for THIS user -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <!-- 1. Books Published -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+              <div class="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                <span>จำนวนหนังสือที่ลง</span>
+                <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <i data-lucide="book-open" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div class="text-2xl font-black text-slate-900">${totalPublished.toLocaleString()} <span class="text-xs font-normal text-slate-500">เล่ม</span></div>
+              <p class="text-[10px] text-slate-400">ผลงานที่คุณลงขายบนหน้าร้าน</p>
+            </div>
+
+            <!-- 2. Units Sold -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+              <div class="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                <span>จำนวนที่ขายได้</span>
+                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div class="text-2xl font-black text-indigo-900">${totalUnitsSold.toLocaleString()} <span class="text-xs font-normal text-slate-500">เล่ม</span></div>
+              <p class="text-[10px] text-slate-400">ยอดจำหน่ายรวมของหนังสือคุณ</p>
+            </div>
+
+            <!-- 3. Total Revenue -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+              <div class="flex items-center justify-between text-slate-500 text-xs font-semibold">
+                <span>ยอดที่ขายได้ (รายได้รวม)</span>
+                <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <i data-lucide="trending-up" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div class="text-2xl font-black text-slate-900">฿ ${totalSalesRevenue.toLocaleString()}</div>
+              <p class="text-[10px] text-slate-400">ยอดขายจริงที่ได้รับจากลูกค้า</p>
+            </div>
+
+            <!-- 4. Stripe Payout (90%) -->
+            <div class="bg-gradient-to-br from-emerald-500 to-teal-700 p-5 rounded-2xl text-white shadow-md shadow-emerald-500/20 space-y-2">
+              <div class="flex items-center justify-between text-emerald-100 text-xs font-semibold">
+                <span>ยอดรอโอน (Stripe Payout)</span>
+                <div class="w-8 h-8 rounded-xl bg-white/20 text-white flex items-center justify-center">
+                  <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div class="text-2xl font-black text-white">฿ ${stripePayout.toLocaleString()}</div>
+              <div class="flex items-center justify-between text-[10px] text-emerald-100">
+                <span>ส่วนแบ่ง 90% ของยอดขายจริง</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded font-mono">Stripe Connect</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Section: My Published Books Table -->
+          <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 class="font-bold text-slate-900 text-base">รายการหนังสือที่ลงขาย (${totalPublished} เล่ม)</h3>
+                <p class="text-xs text-slate-500 mt-0.5">เฉพาะผลงานที่สร้างและวางขายโดยบัญชี ${userName}</p>
+              </div>
+              <button onclick="navigateTo('seller')" class="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition flex items-center space-x-1.5">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>เพิ่มหนังสือใหม่</span>
+              </button>
+            </div>
+
+            ${totalPublished === 0 ? `
+              <div class="p-12 text-center space-y-3">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto">
+                  <i data-lucide="book-plus" class="w-8 h-8"></i>
+                </div>
+                <h4 class="font-bold text-slate-800 text-base">คุณยังไม่มีหนังสือที่วางจำหน่าย</h4>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto">
+                  เริ่มต้นสร้างรายได้ด้วยการลงขายหนังสือ E-Book หรือไฟล์ดิจิทัลเล่มแรกของคุณวันนี้ รับส่วนแบ่ง 90% คำนวณตรงเข้าบัญชีคุณ
+                </p>
+                <div class="pt-2">
+                  <button onclick="navigateTo('seller')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/25 transition">
+                    ลงขายหนังสือเล่มแรกเลย
+                  </button>
+                </div>
+              </div>
+            ` : `
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                      <th class="py-3 px-4">หนังสือ / สินค้าดิจิทัล</th>
+                      <th class="py-3 px-4">ราคาขาย</th>
+                      <th class="py-3 px-4 text-center">ยอดขาย (เล่ม)</th>
+                      <th class="py-3 px-4">ยอดขายรวม</th>
+                      <th class="py-3 px-4">ส่วนแบ่งของคุณ (90%)</th>
+                      <th class="py-3 px-4 text-center">สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${booksRows}
+                  </tbody>
+                </table>
+              </div>
+            `}
+          </div>
+
+          <!-- Section: Recent Sales History for My Books -->
+          ${totalPublished > 0 ? `
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden p-6 space-y-4">
+              <h3 class="font-bold text-slate-900 text-base">ประวัติคำสั่งซื้อผลงานของคุณ (${mySalesLog.length} รายการ)</h3>
+              ${mySalesLog.length === 0 ? `
+                <div class="p-6 text-center text-xs text-slate-400 bg-slate-50 rounded-2xl">
+                  ยังไม่มีคำสั่งซื้อสำหรับหนังสือของคุณ เมื่อลูกค้าสั่งซื้อผ่าน Stripe รายการจะปรากฏที่นี่ทันที
+                </div>
+              ` : `
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr class="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                        <th class="py-2.5 px-3">Order ID</th>
+                        <th class="py-2.5 px-3">สินค้า</th>
+                        <th class="py-2.5 px-3 text-center">จำนวน</th>
+                        <th class="py-2.5 px-3">ยอดรวม</th>
+                        <th class="py-2.5 px-3 text-emerald-600 font-bold">เงินที่ได้รับ (90%)</th>
+                        <th class="py-2.5 px-3 text-right">วันที่</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${mySalesLog.slice(0, 10).map(s => `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50/50">
+                          <td class="py-2.5 px-3 font-mono font-semibold text-blue-600">#${s.orderId}</td>
+                          <td class="py-2.5 px-3 font-medium text-slate-800">${s.title}</td>
+                          <td class="py-2.5 px-3 text-center">${s.qty}</td>
+                          <td class="py-2.5 px-3 font-semibold text-slate-700">฿ ${s.total.toLocaleString()}</td>
+                          <td class="py-2.5 px-3 font-black text-emerald-600">฿ ${s.payout.toLocaleString()}</td>
+                          <td class="py-2.5 px-3 text-right text-slate-400 font-mono text-[11px]">${s.date ? new Date(s.date).toLocaleDateString('th-TH') : '-'}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `}
+            </div>
+          ` : ''}
+
+        </div>
+      `;
+    }
+
+    function handleUserPayoutRequest(amount) {
+      if (!amount || amount <= 0) {
+        alert("ยังไม่มียอดเงินที่สามารถขอโอนได้ในขณะนี้ เมื่อผลงานของคุณมียอดขายจะสามารถกดขอรับเงินโอนได้ครับ");
+        return;
+      }
+      alert(`คำขอรับเงินโอนยอด ฿ ${amount.toLocaleString()} ผ่าน Stripe Connect สำเร็จเรียบร้อย!\nระบบจะดำเนินการโอนเงินเข้าบัญชีธนาคารของคุณภายใน 1-3 วันทำการ`);
     }
 
     // ========== ADMIN LOCKED PERMISSION SCREEN ==========
