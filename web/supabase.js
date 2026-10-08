@@ -84,7 +84,7 @@ class SupabaseService {
     }
   }
 
-  // ========== PRODUCTS DATABASE (POSTGRESQL) ==========
+  // ========== 1. PRODUCTS DATABASE (POSTGRESQL) ==========
   async getProducts() {
     if (this.client) {
       try {
@@ -101,15 +101,19 @@ class SupabaseService {
             price: Number(item.price),
             originalPrice: item.original_price ? Number(item.original_price) : null,
             rating: Number(item.rating || 5.0),
+            reviewCount: 10,
             fileType: item.file_type || 'PDF',
+            fileSize: 'ขนาดประมาณ 5.5 MB',
             category: item.category,
+            categoryName: item.category === 'E-Book' ? 'หนังสือดิจิทัล' : item.category,
             description: item.description,
-            gradient: item.gradient || 'from-blue-600 to-indigo-700',
-            tag: item.tag
+            downloadUrl: '/downloads/life-better-start-from-us.pdf',
+            coverGradient: item.gradient || 'from-blue-600 to-indigo-700',
+            badge: item.tag || 'ยอดนิยม'
           }));
         }
       } catch (e) {
-        console.warn("Supabase getProducts error, falling back to local:", e);
+        console.warn("Supabase getProducts error:", e);
       }
     }
     return null;
@@ -128,14 +132,36 @@ class SupabaseService {
           file_type: product.fileType || 'PDF',
           category: product.category,
           description: product.description,
-          gradient: product.gradient || 'from-blue-600 to-indigo-700',
-          tag: product.tag || null
+          gradient: product.coverGradient || product.gradient || 'from-blue-600 to-indigo-700',
+          tag: product.badge || product.tag || null
         };
         const { data, error } = await this.client.from('products').insert([payload]).select();
         if (error) throw error;
         return { success: true, data };
       } catch (e) {
         console.error("Supabase insertProduct failed:", e);
+        return { success: false, error: e.message };
+      }
+    }
+    return { success: false, fallback: true };
+  }
+
+  async updateProduct(id, updates) {
+    if (this.client) {
+      try {
+        const payload = {
+          title: updates.title,
+          author: updates.author,
+          price: updates.price,
+          original_price: updates.originalPrice,
+          category: updates.category,
+          description: updates.description
+        };
+        const { data, error } = await this.client.from('products').update(payload).eq('id', id).select();
+        if (error) throw error;
+        return { success: true, data };
+      } catch (e) {
+        console.error("Supabase updateProduct failed:", e);
         return { success: false, error: e.message };
       }
     }
@@ -156,7 +182,7 @@ class SupabaseService {
     return { success: false, fallback: true };
   }
 
-  // ========== ORDERS DATABASE (POSTGRESQL) ==========
+  // ========== 2. ORDERS & STATISTICS DATABASE (POSTGRESQL) ==========
   async getOrders() {
     if (this.client) {
       try {
@@ -170,16 +196,18 @@ class SupabaseService {
             id: o.id,
             customerName: o.customer_name,
             customerEmail: o.customer_email,
+            customerPhone: "089-999-9999",
             totalAmount: Number(o.total_amount),
-            status: o.status,
-            paymentMethod: o.payment_method,
+            paymentStatus: o.status,
+            deliveryStatus: "DELIVERED",
+            paymentMethod: o.payment_method || "Stripe (Card)",
             stripeChargeId: o.stripe_charge_id,
-            items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items,
+            items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
             createdAt: o.created_at
           }));
         }
       } catch (e) {
-        console.warn("Supabase getOrders error, falling back to local:", e);
+        console.warn("Supabase getOrders error:", e);
       }
     }
     return null;
@@ -193,8 +221,8 @@ class SupabaseService {
           customer_name: order.customerName,
           customer_email: order.customerEmail,
           total_amount: order.totalAmount,
-          status: order.status || 'PAID',
-          payment_method: order.paymentMethod || 'stripe',
+          status: order.paymentStatus || order.status || 'PAID',
+          payment_method: order.paymentMethod || 'Stripe (Card)',
           stripe_charge_id: order.stripeChargeId,
           items: order.items,
           created_at: order.createdAt || new Date().toISOString()
@@ -210,10 +238,43 @@ class SupabaseService {
     return { success: false, fallback: true };
   }
 
-  // ========== SUPABASE AUTH ==========
+  async trackOrder(query) {
+    if (this.client && query) {
+      try {
+        const cleanQuery = query.trim();
+        const { data, error } = await this.client
+          .from('orders')
+          .select('*')
+          .or(`id.ilike.%${cleanQuery}%,customer_email.ilike.%${cleanQuery}%`)
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          return data.map(o => ({
+            id: o.id,
+            customerName: o.customer_name,
+            customerEmail: o.customer_email,
+            customerPhone: "089-999-9999",
+            totalAmount: Number(o.total_amount),
+            paymentStatus: o.status,
+            deliveryStatus: "DELIVERED",
+            paymentMethod: o.payment_method || "Stripe (Card)",
+            stripeChargeId: o.stripe_charge_id,
+            items: typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []),
+            createdAt: o.created_at
+          }));
+        }
+      } catch (e) {
+        console.warn("Supabase trackOrder query error:", e);
+      }
+    }
+    return null;
+  }
+
+  // ========== 3. MEMBERSHIP & USER PROFILES (SUPABASE AUTH & PROFILES) ==========
   async signUp(email, password, name, role = 'user') {
     if (this.client) {
       try {
+        // 1. Supabase Auth signUp
         const { data, error } = await this.client.auth.signUp({
           email,
           password,
@@ -223,18 +284,21 @@ class SupabaseService {
         });
         if (error) throw error;
 
-        // Try inserting profile
-        if (data.user) {
-          await this.client.from('profiles').upsert({
-            id: data.user.id,
-            email,
-            name,
-            role
-          }).catch(console.warn);
-        }
+        // 2. Upsert to public.profiles table
+        const userId = data.user?.id || (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : 'usr-' + Date.now());
+        await this.client.from('profiles').upsert({
+          id: userId,
+          email,
+          name,
+          role
+        }).catch(err => console.warn("Supabase profile upsert note:", err));
 
-        return { success: true, user: { name, email, role, id: data.user?.id } };
+        return { 
+          success: true, 
+          user: { name, email, role, id: userId } 
+        };
       } catch (e) {
+        console.error("Supabase signUp failed:", e);
         return { success: false, error: e.message };
       }
     }
@@ -244,6 +308,7 @@ class SupabaseService {
   async signIn(email, password) {
     if (this.client) {
       try {
+        // 1. Authenticate via Supabase Auth
         const { data, error } = await this.client.auth.signInWithPassword({
           email,
           password
@@ -251,11 +316,11 @@ class SupabaseService {
         if (error) throw error;
 
         let name = data.user.user_metadata?.name || email.split('@')[0];
-        let role = data.user.user_metadata?.role || (email.includes('admin') ? 'admin' : 'user');
+        let role = data.user.user_metadata?.role || (email.toLowerCase().includes('admin') ? 'admin' : 'user');
 
-        // Check profile table if exists
+        // 2. Fetch latest role & name from Supabase profiles
         try {
-          const { data: prof } = await this.client.from('profiles').select('*').eq('id', data.user.id).single();
+          const { data: prof } = await this.client.from('profiles').select('*').eq('email', email).single();
           if (prof) {
             name = prof.name || name;
             role = prof.role || role;
@@ -264,10 +329,25 @@ class SupabaseService {
 
         return { success: true, user: { name, email, role, id: data.user.id } };
       } catch (e) {
+        console.error("Supabase signIn failed:", e);
         return { success: false, error: e.message };
       }
     }
     return { success: false, fallback: true };
+  }
+
+  async getProfiles() {
+    if (this.client) {
+      try {
+        const { data, error } = await this.client.from('profiles').select('*').order('created_at', { ascending: false });
+        if (!error && data) {
+          return data;
+        }
+      } catch (e) {
+        console.warn("Supabase getProfiles error:", e);
+      }
+    }
+    return [];
   }
 
   // Subscribe to Realtime Orders updates

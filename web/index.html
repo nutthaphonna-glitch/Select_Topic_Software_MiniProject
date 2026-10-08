@@ -964,6 +964,12 @@
             if (state.activePage === 'admin') renderAllViews();
           }
 
+          const remoteProfiles = await window.supabaseService.getProfiles();
+          if (remoteProfiles && remoteProfiles.length > 0) {
+            state.profiles = remoteProfiles;
+            if (state.activePage === 'admin') renderAllViews();
+          }
+
           // Realtime listener
           window.supabaseService.subscribeRealtimeOrders((newOrder) => {
             const mapped = {
@@ -1056,58 +1062,68 @@
       }
     }
 
-    function handleLandingAuthSubmit(e) {
+    async function handleLandingAuthSubmit(e) {
       e.preventDefault();
       const email = document.getElementById('landing-auth-email').value.trim();
       const password = document.getElementById('landing-auth-password').value;
-      
-      const usersStr = localStorage.getItem('ebook_registered_users');
-      let registeredUsers = usersStr ? JSON.parse(usersStr) : [
-        { name: "ผู้ดูแลระบบ", email: "admin@ebookshop.com", password: "password", role: "admin" },
-        { name: "ผู้ใช้งานทั่วไป", email: "user@ebookshop.com", password: "password", role: "user" }
-      ];
+      const submitBtn = document.getElementById('landing-submit-btn');
 
-      if (state.authLandingTab === 'register') {
-        const name = document.getElementById('landing-auth-name').value.trim() || email.split('@')[0];
-        const role = document.getElementById('landing-auth-role').value;
-        const existing = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (existing) {
-          alert("อีเมลนี้ถูกลงทะเบียนไว้แล้ว กรุณาเข้าสู่ระบบ");
-          setAuthLandingTab('login');
-          return;
-        }
-        const newUser = { name, email, password, role };
-        registeredUsers.push(newUser);
-        localStorage.setItem('ebook_registered_users', JSON.stringify(registeredUsers));
-        state.currentUser = { name, email, role };
-        localStorage.setItem('ebook_user', JSON.stringify(state.currentUser));
-        state.activePage = role === 'admin' ? 'admin' : 'store';
-
-        // Supabase Auth Sync
-        if (window.supabaseService && window.supabaseService.isConfigured()) {
-          window.supabaseService.signUp(email, password, name, role).catch(console.warn);
-        }
-
-        alert(`ลงทะเบียนสำเร็จ ยินดีต้อนรับคุณ ${name}`);
-      } else {
-        // Login
-        const matched = registeredUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-        if (matched) {
-          state.currentUser = { name: matched.name, email: matched.email, role: matched.role };
-        } else {
-          // If not in pre-registered list, allow login with role determined by email or default to user
-          const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
-          const name = email.split('@')[0];
-          state.currentUser = { name, email, role };
-          registeredUsers.push({ name, email, password, role });
-          localStorage.setItem('ebook_registered_users', JSON.stringify(registeredUsers));
-        }
-        localStorage.setItem('ebook_user', JSON.stringify(state.currentUser));
-        state.activePage = state.currentUser.role === 'admin' ? 'admin' : 'store';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "กำลังประมวลผลผ่าน Supabase...";
       }
 
-      renderAllViews();
-      lucide.createIcons();
+      try {
+        if (state.authLandingTab === 'register') {
+          // Register via Supabase
+          const nameInput = document.getElementById('landing-auth-name');
+          const name = (nameInput && nameInput.value.trim()) || email.split('@')[0];
+          const role = (document.getElementById('landing-auth-role') && document.getElementById('landing-auth-role').value) || 'user';
+
+          if (window.supabaseService && window.supabaseService.isConfigured()) {
+            const res = await window.supabaseService.signUp(email, password, name, role);
+            if (!res.success) {
+              alert("การลงทะเบียนบน Supabase ล้มเหลว:\n" + res.error);
+              return;
+            }
+            state.currentUser = res.user;
+          } else {
+            // Local fallback only if keys not provided yet
+            state.currentUser = { name, email, role };
+          }
+
+          localStorage.setItem('ebook_user', JSON.stringify(state.currentUser));
+          state.activePage = state.currentUser.role === 'admin' ? 'admin' : 'store';
+          alert(`สมัครสมาชิกสำเร็จ! บันทึกข้อมูลไปยัง Supabase เรียบร้อยแล้ว (ยินดีต้อนรับคุณ ${state.currentUser.name})`);
+        } else {
+          // Login via Supabase
+          if (window.supabaseService && window.supabaseService.isConfigured()) {
+            const res = await window.supabaseService.signIn(email, password);
+            if (!res.success) {
+              alert("เข้าสู่ระบบไม่สำเร็จ (Supabase Auth):\n" + res.error + "\n\n(หากยังไม่มีบัญชีบน Supabase กรุณากดแท็บ 'สมัครสมาชิก' ก่อนครับ)");
+              return;
+            }
+            state.currentUser = res.user;
+          } else {
+            const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
+            const name = email.split('@')[0];
+            state.currentUser = { name, email, role };
+          }
+
+          localStorage.setItem('ebook_user', JSON.stringify(state.currentUser));
+          state.activePage = state.currentUser.role === 'admin' ? 'admin' : 'store';
+        }
+
+        renderAllViews();
+        lucide.createIcons();
+      } catch (err) {
+        alert("เกิดข้อผิดพลาด: " + err.message);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = state.authLandingTab === 'register' ? "สมัครสมาชิก (Register)" : "เข้าสู่ระบบ (Login)";
+        }
+      }
     }
 
     function handleGoogleLogin() {
@@ -1727,7 +1743,7 @@
       const totalSales = state.orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
       const totalOrders = state.orders.length;
       const totalProducts = state.products.length;
-      const totalCustomers = new Set(state.orders.map(o => o.customerEmail)).size;
+      const totalCustomers = (state.profiles && state.profiles.length > 0) ? state.profiles.length : new Set(state.orders.map(o => o.customerEmail)).size;
 
       return `
         <div class="space-y-8">
@@ -2205,11 +2221,23 @@
       navigateTo('store');
     }
 
-    function handleTrackSearch() {
+    async function handleTrackSearch() {
       const orderId = document.getElementById('track-order-id')?.value.trim();
       const email = document.getElementById('track-email')?.value.trim();
       const resultContainer = document.getElementById('track-result-container');
       if (resultContainer) {
+        // Query Supabase directly
+        if (window.supabaseService && window.supabaseService.isConfigured() && (orderId || email)) {
+          const remoteOrders = await window.supabaseService.trackOrder(orderId || email);
+          if (remoteOrders && remoteOrders.length > 0) {
+            remoteOrders.forEach(ro => {
+              if (!state.orders.some(o => o.id === ro.id)) {
+                state.orders.unshift(ro);
+              }
+            });
+            saveOrders();
+          }
+        }
         resultContainer.innerHTML = renderTrackResultHTML(orderId, email);
         lucide.createIcons();
       }
@@ -2400,6 +2428,16 @@
       };
 
       saveProducts();
+      if (window.supabaseService) {
+        window.supabaseService.updateProduct(id, {
+          title: updatedTitle,
+          author: updatedAuthor,
+          price: updatedPrice,
+          originalPrice: updatedOrigPrice,
+          category: updatedCategory,
+          description: updatedDescription
+        });
+      }
       closeEditProductModal();
       renderAllViews();
       lucide.createIcons();
