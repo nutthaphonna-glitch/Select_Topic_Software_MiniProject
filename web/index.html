@@ -764,7 +764,7 @@
     // ========== INITIALIZATION ==========
     window.addEventListener('DOMContentLoaded', async () => {
       loadInitialData();
-      checkAuthSession();
+      await checkAuthSession();
       renderAllViews();
       lucide.createIcons();
     });
@@ -894,18 +894,40 @@
       const savedCart = localStorage.getItem('ebook_cart');
       if (savedCart) state.cart = JSON.parse(savedCart);
 
+      // Purge legacy local mock accounts
+      localStorage.removeItem('ebook_registered_users');
+
       // Initialize Supabase BaaS Sync
       syncSupabaseData();
     }
 
-    function checkAuthSession() {
-      const savedUser = localStorage.getItem('ebook_user');
-      if (savedUser) {
-        state.currentUser = JSON.parse(savedUser);
-      } else {
-        // Not logged in by default -> Display Login First Page
-        state.currentUser = null;
+    async function checkAuthSession() {
+      // 1. If Supabase is connected, verify active session from Supabase Auth
+      if (window.supabaseService && window.supabaseService.isConfigured() && window.supabaseService.client) {
+        try {
+          const { data, error } = await window.supabaseService.client.auth.getSession();
+          if (data && data.session && data.session.user) {
+            const user = data.session.user;
+            let name = user.user_metadata?.name || user.email.split('@')[0];
+            let role = user.user_metadata?.role || (user.email.toLowerCase().includes('admin') ? 'admin' : 'user');
+            try {
+              const { data: prof } = await window.supabaseService.client.from('profiles').select('*').eq('id', user.id).single();
+              if (prof) {
+                name = prof.name || name;
+                role = prof.role || role;
+              }
+            } catch (_) {}
+            state.currentUser = { id: user.id, name, email: user.email, role };
+            return;
+          }
+        } catch (e) {
+          console.warn("Supabase auth session check note:", e);
+        }
       }
+
+      // 2. If no valid Supabase session exists, purge any old cached session and stay logged out
+      state.currentUser = null;
+      localStorage.removeItem('ebook_user');
     }
 
     function saveProducts() {
@@ -1075,41 +1097,42 @@
 
       try {
         if (state.authLandingTab === 'register') {
-          // Register via Supabase
+          // Register strictly via Supabase
           const nameInput = document.getElementById('landing-auth-name');
           const name = (nameInput && nameInput.value.trim()) || email.split('@')[0];
           const role = (document.getElementById('landing-auth-role') && document.getElementById('landing-auth-role').value) || 'user';
 
-          if (window.supabaseService && window.supabaseService.isConfigured()) {
-            const res = await window.supabaseService.signUp(email, password, name, role);
-            if (!res.success) {
-              alert("การลงทะเบียนบน Supabase ล้มเหลว:\n" + res.error);
-              return;
-            }
-            state.currentUser = res.user;
-          } else {
-            // Local fallback only if keys not provided yet
-            state.currentUser = { name, email, role };
+          if (!window.supabaseService || !window.supabaseService.isConfigured()) {
+            alert("กรุณาเชื่อมต่อ Supabase Database ก่อนสมัครสมาชิก\n(คลิกปุ่ม ⚡ Supabase ด้านบน เพื่อใส่ Project URL และ anon Key)");
+            openSupabaseModal();
+            return;
           }
 
+          const res = await window.supabaseService.signUp(email, password, name, role);
+          if (!res.success) {
+            alert("การลงทะเบียนบน Supabase ล้มเหลว:\n" + res.error);
+            return;
+          }
+
+          state.currentUser = res.user;
           localStorage.setItem('ebook_user', JSON.stringify(state.currentUser));
           state.activePage = state.currentUser.role === 'admin' ? 'admin' : 'store';
-          alert(`สมัครสมาชิกสำเร็จ! บันทึกข้อมูลไปยัง Supabase เรียบร้อยแล้ว (ยินดีต้อนรับคุณ ${state.currentUser.name})`);
+          alert(`สมัครสมาชิกสำเร็จ! ข้อมูลถูกบันทึกไปยัง Supabase เรียบร้อยแล้ว (ยินดีต้อนรับคุณ ${state.currentUser.name})`);
         } else {
-          // Login via Supabase
-          if (window.supabaseService && window.supabaseService.isConfigured()) {
-            const res = await window.supabaseService.signIn(email, password);
-            if (!res.success) {
-              alert("เข้าสู่ระบบไม่สำเร็จ (Supabase Auth):\n" + res.error + "\n\n(หากยังไม่มีบัญชีบน Supabase กรุณากดแท็บ 'สมัครสมาชิก' ก่อนครับ)");
-              return;
-            }
-            state.currentUser = res.user;
-          } else {
-            const role = email.toLowerCase().includes('admin') ? 'admin' : 'user';
-            const name = email.split('@')[0];
-            state.currentUser = { name, email, role };
+          // Login strictly via Supabase
+          if (!window.supabaseService || !window.supabaseService.isConfigured()) {
+            alert("กรุณาเชื่อมต่อ Supabase Database ก่อนเข้าสู่ระบบ\n(คลิกปุ่ม ⚡ Supabase ด้านบน เพื่อใส่ Project URL และ anon Key)");
+            openSupabaseModal();
+            return;
           }
 
+          const res = await window.supabaseService.signIn(email, password);
+          if (!res.success) {
+            alert("เข้าสู่ระบบไม่สำเร็จ (Supabase Auth):\n" + res.error + "\n\nหากยังไม่มีบัญชีบน Supabase กรุณากดแท็บ 'สมัครสมาชิก (Register)' ก่อนครับ");
+            return;
+          }
+
+          state.currentUser = res.user;
           localStorage.setItem('ebook_user', JSON.stringify(state.currentUser));
           state.activePage = state.currentUser.role === 'admin' ? 'admin' : 'store';
         }
@@ -1138,7 +1161,12 @@
       lucide.createIcons();
     }
 
-    function handleLogout() {
+    async function handleLogout() {
+      if (window.supabaseService && window.supabaseService.client) {
+        try {
+          await window.supabaseService.client.auth.signOut();
+        } catch (_) {}
+      }
       state.currentUser = null;
       localStorage.removeItem('ebook_user');
       state.activePage = 'store';
