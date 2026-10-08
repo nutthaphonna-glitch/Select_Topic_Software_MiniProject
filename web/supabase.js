@@ -287,12 +287,16 @@ class SupabaseService {
         // 2. Direct upsert to public.profiles table
         const userId = data.user?.id;
         if (userId) {
-          await this.client.from('profiles').upsert({
-            id: userId,
-            email: email,
-            name: name,
-            role: role
-          }).catch(err => console.warn("Supabase profile upsert note:", err));
+          try {
+            await this.client.from('profiles').upsert({
+              id: userId,
+              email: email,
+              name: name,
+              role: role
+            });
+          } catch (profileErr) {
+            console.warn("Supabase profile upsert note:", profileErr);
+          }
         }
 
         return { 
